@@ -1,165 +1,250 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>الرياض - Mapbox</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
-  <style>
-    body { margin: 0; }
-    #map { width: 100%; height: 100vh; }
-    #loading {
-      position: absolute; top: 10px; right: 10px; z-index: 10;
-      background: white; padding: 8px 12px; border-radius: 8px;
-      font-family: sans-serif; font-size: 14px;
-    }
-    #filters {
-      position: absolute; top: 50px; right: 10px; z-index: 10;
-      display: flex; gap: 6px; flex-wrap: wrap;
-      font-family: sans-serif;
-    }
-    #filters button {
-      background: white; border: 1px solid #ddd; border-radius: 20px;
-      padding: 7px 14px; cursor: pointer; font-size: 14px;
-    }
-    #filters button.active {
-      background: #111; color: white; border-color: #111;
-    }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-  <div id="loading">⏳ جاري تحميل الخدمات...</div>
+  <head>
+    <meta charset="utf-8" />
+    <title>الرياض - Mapbox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+      }
+      #map {
+        width: 100%;
+        height: 100vh;
+      }
+      #loading {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        background: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-family: sans-serif;
+        font-size: 14px;
+      }
+      #filters {
+        position: absolute;
+        top: 50px;
+        right: 10px;
+        z-index: 10;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        font-family: sans-serif;
+      }
+      #filters button {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 7px 14px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      #filters button.active {
+        background: #111;
+        color: white;
+        border-color: #111;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="loading">⏳----- جاري تحميل الخدمات...</div>
 
-  <div id="filters">
-    <button data-filter="all" class="active">الكل</button>
-    <button data-filter="hospital">🏥 مستشفيات</button>
-    <button data-filter="mosque">🕌 مساجد</button>
-    <button data-filter="pharmacy">💊 صيدليات</button>
-    <button data-filter="school">🏫 مدارس</button>
-  </div>
+    <div id="filters">
+      <button data-filter="all" class="active">الكل</button>
+      <button data-filter="hospital">🏥--- مستشفيات</button>
+      <button data-filter="mosque">🕌 مساجد</button>
+      <button data-filter="pharmacy">💊 صيدليات</button>
+      <button data-filter="school">🏫 مدارس</button>
+    </div>
 
-  <script>
-    mapboxgl.accessToken = 'pk.eyJ1IjoibW9oYW1lZC1hd2FkMTk5MyIsImEiOiJjbXZ6M2c3aGIweTlnNGRzOTJ6bHJmM3gzIn0.h-9Y7ndziWGhMhoNmudXfw';
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center: [46.6753, 24.7136],
-      zoom: 11
-    });
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoibW9oYW1lZC1hd2FkMTk5MyIsImEiOiJjbXZ6M2c3aGIweTlnNGRzOTJ6bHJmM3gzIn0.h-9Y7ndziWGhMhoNmudXfw";
+      const map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        center: [46.6753, 24.7136],
+        zoom: 11,
+      });
 
-    const SERVICES = [
-      { file: 'hospitals.geojson', type: 'hospital', icon: '🏥', label: 'مستشفى', color: '#e11d48' },
-      { file: 'mosques.geojson',   type: 'mosque',   icon: '🕌', label: 'مسجد',   color: '#22c55e' },
-      { file: 'pharmacy.geojson',  type: 'pharmacy', icon: '💊', label: 'صيدلية', color: '#3b82f6' },
-      { file: 'school.geojson',    type: 'school',   icon: '🏫', label: 'مدرسة',  color: '#f59e0b' },
-    ];
+      const SERVICES = [
+        {
+          file: "hospitals.geojson",
+          type: "hospital",
+          icon: "🏥",
+          label: "مستشفى",
+          color: "#e11d48",
+        },
+        {
+          file: "mosques.geojson",
+          type: "mosque",
+          icon: "🕌",
+          label: "مسجد",
+          color: "#22c55e",
+        },
+        {
+          file: "pharmacy.geojson",
+          type: "pharmacy",
+          icon: "💊",
+          label: "صيدلية",
+          color: "#3b82f6",
+        },
+        {
+          file: "school.geojson",
+          type: "school",
+          icon: "🏫",
+          label: "مدرسة",
+          color: "#f59e0b",
+        },
+      ];
 
-    let allServices = [];
+      let allServices = [];
 
-    function getName(props) {
-      return props['name:ar'] || props['name:en'] || props.name || props.Name || 'بدون اسم';
-    }
-
-    async function loadRealData() {
-      const results = await Promise.all(
-        SERVICES.map(async (s) => {
-          try {
-            const res = await fetch(s.file);
-            if (!res.ok) return [];
-            const data = await res.json();
-            return data.features
-              .filter((f) => f.geometry && f.geometry.type === "Point")
-              .map((f) => {
-                const [lng, lat] = f.geometry.coordinates;
-                return { name: getName(f.properties), type: s.type, icon: s.icon, label: s.label, color: s.color, lat, lng };
-              });
-          } catch (e) {
-            console.log("ملف مش موجود: " + s.file);
-            return [];
-          }
-        }),
-      );
-
-      allServices = results.flat();
-      document.getElementById("loading").textContent =
-        `✅ تم تحميل ${allServices.length} خدمة حقيقية من الرياض`;
-
-      // حدّث أرقام الزراير
-      document.querySelector('[data-filter="all"]').textContent = `الكل (${allServices.length})`;
-      document.querySelector('[data-filter="hospital"]').textContent = `🏥 مستشفيات (${allServices.filter(x=>x.type==='hospital').length})`;
-      document.querySelector('[data-filter="mosque"]').textContent = `🕌 مساجد (${allServices.filter(x=>x.type==='mosque').length})`;
-      document.querySelector('[data-filter="pharmacy"]').textContent = `💊 صيدليات (${allServices.filter(x=>x.type==='pharmacy').length})`;
-      document.querySelector('[data-filter="school"]').textContent = `🏫 مدارس (${allServices.filter(x=>x.type==='school').length})`;
-
-      renderServices();
-    }
-
-    function renderServices() {
-      const geojson = {
-        type: 'FeatureCollection',
-        features: allServices.map(s => ({
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [s.lng, s.lat] },
-          properties: { name: s.name, label: s.label, icon: s.icon, color: s.color, type: s.type }
-        }))
-      };
-
-      if (map.getSource('services')) {
-        map.getSource('services').setData(geojson);
-        return;
+      function getName(props) {
+        return (
+          props["name:ar"] ||
+          props["name:en"] ||
+          props.name ||
+          props.Name ||
+          "بدون اسم"
+        );
       }
 
-      map.addSource('services', { type: 'geojson', data: geojson });
+      async function loadRealData() {
+        const results = await Promise.all(
+          SERVICES.map(async (s) => {
+            try {
+              const res = await fetch(s.file);
+              if (!res.ok) return [];
+              const data = await res.json();
+              return data.features
+                .filter((f) => f.geometry && f.geometry.type === "Point")
+                .map((f) => {
+                  const [lng, lat] = f.geometry.coordinates;
+                  return {
+                    name: getName(f.properties),
+                    type: s.type,
+                    icon: s.icon,
+                    label: s.label,
+                    color: s.color,
+                    lat,
+                    lng,
+                  };
+                });
+            } catch (e) {
+              console.log("ملف مش موجود: " + s.file);
+              return [];
+            }
+          }),
+        );
 
-      map.addLayer({
-        id: 'services-layer',
-        type: 'circle',
-        source: 'services',
-        paint: {
-          'circle-radius': 6,
-          'circle-color': ['get', 'color'],
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#fff'
+        allServices = results.flat();
+        document.getElementById("loading").textContent =
+          `✅ تم تحميل ${allServices.length} خدمة حقيقية من الرياض`;
+
+        // حدّث أرقام الزراير
+        document.querySelector('[data-filter="all"]').textContent =
+          `الكل (${allServices.length})`;
+        document.querySelector('[data-filter="hospital"]').textContent =
+          `🏥 مستشفيات (${allServices.filter((x) => x.type === "hospital").length})`;
+        document.querySelector('[data-filter="mosque"]').textContent =
+          `🕌 مساجد (${allServices.filter((x) => x.type === "mosque").length})`;
+        document.querySelector('[data-filter="pharmacy"]').textContent =
+          `💊 صيدليات (${allServices.filter((x) => x.type === "pharmacy").length})`;
+        document.querySelector('[data-filter="school"]').textContent =
+          `🏫 مدارس (${allServices.filter((x) => x.type === "school").length})`;
+
+        renderServices();
+      }
+
+      function renderServices() {
+        const geojson = {
+          type: "FeatureCollection",
+          features: allServices.map((s) => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [s.lng, s.lat] },
+            properties: {
+              name: s.name,
+              label: s.label,
+              icon: s.icon,
+              color: s.color,
+              type: s.type,
+            },
+          })),
+        };
+
+        if (map.getSource("services")) {
+          map.getSource("services").setData(geojson);
+          return;
         }
+
+        map.addSource("services", { type: "geojson", data: geojson });
+
+        map.addLayer({
+          id: "services-layer",
+          type: "circle",
+          source: "services",
+          paint: {
+            "circle-radius": 6,
+            "circle-color": ["get", "color"],
+            "circle-stroke-width": 1,
+            "circle-stroke-color": "#fff",
+          },
+        });
+
+        map.on("click", "services-layer", (e) => {
+          const p = e.features[0].properties;
+          new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(`<b>${p.icon} ${p.name}</b><br>${p.label}`)
+            .addTo(map);
+        });
+
+        map.on(
+          "mouseenter",
+          "services-layer",
+          () => (map.getCanvas().style.cursor = "pointer"),
+        );
+        map.on(
+          "mouseleave",
+          "services-layer",
+          () => (map.getCanvas().style.cursor = ""),
+        );
+      }
+
+      // ===== الفلاتر =====
+      document.querySelectorAll("#filters button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          // شيل الـ active من الكل وحطه على اللي اتداس
+          document
+            .querySelectorAll("#filters button")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+
+          const filter = btn.dataset.filter;
+          if (!map.getLayer("services-layer")) return;
+
+          if (filter === "all") {
+            map.setFilter("services-layer", null);
+          } else {
+            map.setFilter("services-layer", ["==", ["get", "type"], filter]);
+          }
+        });
       });
 
-      map.on('click', 'services-layer', (e) => {
-        const p = e.features[0].properties;
-        new mapboxgl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(`<b>${p.icon} ${p.name}</b><br>${p.label}`)
-          .addTo(map);
+      map.on("load", () => {
+        loadRealData();
+        setTimeout(() => map.resize(), 200);
       });
-
-      map.on('mouseenter', 'services-layer', () => map.getCanvas().style.cursor = 'pointer');
-      map.on('mouseleave', 'services-layer', () => map.getCanvas().style.cursor = '');
-    }
-
-    // ===== الفلاتر =====
-    document.querySelectorAll('#filters button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        // شيل الـ active من الكل وحطه على اللي اتداس
-        document.querySelectorAll('#filters button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        const filter = btn.dataset.filter;
-        if (!map.getLayer('services-layer')) return;
-
-        if (filter === 'all') {
-          map.setFilter('services-layer', null);
-        } else {
-          map.setFilter('services-layer', ['==', ['get', 'type'], filter]);
-        }
-      });
-    });
-
-    map.on('load', () => {
-      loadRealData();
-      setTimeout(() => map.resize(), 200);
-    });
-    window.addEventListener('resize', () => map.resize());
-  </script>
-</body>
+      window.addEventListener("resize", () => map.resize());
+    </script>
+  </body>
 </html>
