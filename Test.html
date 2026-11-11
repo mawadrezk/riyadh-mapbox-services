@@ -1,0 +1,472 @@
+<!doctype html>
+<!-- يعرّف المستند بأنه يستخدم إصدار HTML الحديث. -->
+<html lang="ar" dir="rtl">
+  <!-- يحدد لغة الصفحة واتجاه الكتابة من اليمين لليسار. -->
+  <head>
+    <!-- يبدأ معلومات الصفحة التي لا تظهر داخل محتواها مباشرة. -->
+    <meta charset="utf-8" />
+    <!-- يسمح بعرض العربية والرموز بشكل صحيح. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- يجعل أبعاد الصفحة مناسبة للموبايل. -->
+    <title>موقعي على الخريطة</title>
+    <!-- يحدد النص الظاهر في تبويب المتصفح. -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <!-- يحمّل تنسيقات مكتبة Leaflet. -->
+    <style>
+      /* يبدأ تنسيقات الصفحة المكتوبة داخل الملف. */
+      body {
+        margin: 0;
+        font-family: Tahoma, sans-serif;
+      } /* يزيل الهوامش الافتراضية ويحدد خطًا مناسبًا للعربية. */
+      #map {
+        height: 100vh;
+        width: 100%;
+      } /* يجعل الخريطة تملأ نافذة المتصفح. */
+      .panel {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 1000;
+        width: min(320px, calc(100% - 64px));
+        padding: 14px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px #0003;
+      } /* يضع لوحة التحكم فوق الخريطة مع عرض مناسب للشاشات الصغيرة. */
+      h1 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      } /* يضبط عنوان لوحة التحكم. */
+      button {
+        width: 100%;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 6px;
+        background: #166534;
+        color: white;
+        font: inherit;
+        cursor: pointer;
+      } /* ينسق زر طلب الموقع. */
+      button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      } /* يوضح أن الزر غير متاح أثناء البحث عن الموقع. */
+      #drawing-tools {
+        display: grid;
+        gap: 7px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e5e7eb;
+      } /* يفصل أدوات الرسم بصريًا عن زر تحديد الموقع. */
+      #drawing-tools h2 {
+        margin: 0;
+        font-size: 15px;
+      } /* يضبط عنوان أدوات الرسم. */
+      .tool-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      } /* يرتب أوضاع الرسم في صف واحد. */
+      #drawing-tools button {
+        padding: 8px 5px;
+        background: #f3f4f6;
+        color: #1f2937;
+        border: 1px solid #d1d5db;
+        font-size: 13px;
+      } /* ينسق أزرار أدوات الرسم بشكل محايد. */
+      #drawing-tools button.active {
+        background: #166534;
+        border-color: #166534;
+        color: white;
+      } /* يميز وضع الرسم النشط. */
+      .action-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      } /* يضع زري الإنهاء والإلغاء بجوار بعضهما. */
+      #drawing-tools #finish-drawing {
+        background: #166534;
+        color: white;
+      } /* يميز زر حفظ الرسم المكتمل. */
+      #drawing-tools #clear-drawings {
+        background: white;
+        color: #991b1b;
+        border-color: #fecaca;
+      } /* يعطي زر المسح مظهرًا مختلفًا عن أدوات الإنشاء. */
+      .measurement-icon {
+        background: transparent;
+        border: 0;
+      } /* يزيل الإطار الافتراضي لأيقونة ملصق القياس. */
+      .measurement-label {
+        display: flex;
+        width: 270px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #166534;
+        border-radius: 4px;
+        background: white;
+        box-shadow: 0 1px 5px #0003;
+        color: #111827;
+        font-family: Tahoma, sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+      } /* ينسق ملصقات الطول والمساحة فوق الأشكال. */
+      #status {
+        margin: 10px 0 0;
+        font-size: 14px;
+        line-height: 1.6;
+      } /* يجعل رسالة الحالة واضحة ومقروءة. */
+    </style>
+    <!-- ينهي تنسيقات الصفحة. -->
+  </head>
+  <!-- ينهي معلومات الصفحة. -->
+  <body>
+    <!-- يبدأ المحتوى الذي يظهر للمستخدم. -->
+    <main id="map" aria-label="خريطة تفاعلية"></main>
+    <!-- هذا العنصر هو المساحة التي سترسم Leaflet الخريطة بداخلها. -->
+    <section class="panel" aria-labelledby="page-title">
+      <!-- ينشئ لوحة التحكم ويحدد عنوانها لقارئات الشاشة. -->
+      <h1 id="page-title">اعثر على موقعي</h1>
+      <!-- عنوان لوحة التحكم. -->
+      <button id="locate-button" type="button">استخدم موقعي الحالي</button>
+      <!-- يبدأ طلب تحديد الموقع عند الضغط عليه. -->
+      <div id="drawing-tools" aria-label="أدوات الرسم على الخريطة">
+        <!-- يجمع أزرار إنشاء وإدارة الرسومات. -->
+        <h2>الرسم على الخريطة</h2>
+        <!-- يوضح وظيفة مجموعة الأزرار التالية. -->
+        <div class="tool-row" role="group" aria-label="اختيار نوع الرسم">
+          <!-- يجمع أوضاع النقطة والخط والمساحة. -->
+          <button type="button" data-draw-mode="point" aria-pressed="false">
+            نقطة
+          </button>
+          <!-- يفعّل وضع إضافة نقطة واحدة. -->
+          <button type="button" data-draw-mode="line" aria-pressed="false">
+            خط
+          </button>
+          <!-- يفعّل وضع رسم خط من عدة نقاط. -->
+          <button type="button" data-draw-mode="area" aria-pressed="false">
+            مساحة
+          </button>
+          <!-- يفعّل وضع رسم مضلع يمثل مساحة. -->
+        </div>
+        <!-- ينهي صف اختيار نوع الرسم. -->
+        <div class="action-row">
+          <!-- يجمع زري إنهاء الرسم الجاري وإلغائه. -->
+          <button id="finish-drawing" type="button" hidden disabled>
+            إنهاء الرسم
+          </button>
+          <!-- يعتمد الخط أو المساحة بعد إضافة نقاط كافية. -->
+          <button id="cancel-drawing" type="button">إلغاء الرسم</button>
+          <!-- يلغي الرسم الجاري دون حذف الرسومات المكتملة. -->
+        </div>
+        <!-- ينهي صف أزرار الإجراءات. -->
+        <button id="clear-drawings" type="button">مسح كل الرسومات</button>
+        <!-- يحذف النقاط والخطوط والمساحات المكتملة. -->
+      </div>
+      <!-- ينهي مجموعة أدوات الرسم. -->
+      <p id="status" role="status" aria-live="polite">
+        الخريطة تعرض الرياض. اضغط الزر للسماح بتحديد موقعك.
+      </p>
+      <!-- يعرض نتيجة الطلب ويعلن تحديثها للتقنيات المساعدة. -->
+    </section>
+    <!-- ينهي لوحة التحكم. -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- يحمّل مكتبة Leaflet قبل استخدام وظائفها. -->
+    <script>
+      // يبدأ كود JavaScript المسؤول عن تشغيل الخريطة والزر.
+      const map = L.map("map").setView([24.7136, 46.6753], 11); // ينشئ الخريطة داخل العنصر map ويبدأ من الرياض بدرجة تقريب 11.
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        // يحدد خادم صور الخريطة المفتوح المصدر.
+        maxZoom: 19, // يحدد أكبر درجة تقريب متاحة من هذا الخادم.
+        attribution: "&copy; OpenStreetMap contributors", // يضيف الإسناد المطلوب لمصدر بيانات الخريطة.
+      }).addTo(map); // يضيف طبقة الخريطة إلى عنصر الخريطة.
+      const button = document.getElementById("locate-button"); // يحصل على زر تحديد الموقع من الصفحة.
+      const status = document.getElementById("status"); // يحصل على العنصر الذي سيعرض رسائل الحالة.
+      const finishButton = document.getElementById("finish-drawing"); // يحصل على زر اعتماد الخط أو المساحة.
+      const drawings = L.featureGroup().addTo(map); // ينشئ مجموعة مستقلة لحفظ كل الرسومات التي أضافها المستخدم.
+      const measurementLabels = L.featureGroup().addTo(map); // يحتفظ بملصقات قياس الأشكال المكتملة مع إمكانية مسحها.
+      const measurementNumber = new Intl.NumberFormat("ar-EG", {
+        maximumFractionDigits: 2,
+      }); // يجهز تنسيق الأرقام الظاهرة في القياسات.
+      let locationMarker = null; // يحتفظ بعلامة الموقع الحالية، ولا توجد علامة عند بداية الصفحة.
+      let accuracyCircle = null; // يحتفظ بدائرة دقة الموقع الحالية، ولا توجد دائرة في البداية.
+      let drawingMode = null; // يخزن نوع الرسم الجاري: نقطة أو خط أو مساحة.
+      let draftPoints = []; // يخزن إحداثيات الشكل الجاري قبل اعتماده.
+      let previewLayer = null; // يحتفظ بالعرض المؤقت للخط أو المساحة أثناء الرسم.
+      let previewLabel = null; // يحتفظ بملصق قياس المعاينة المؤقت.
+
+      function createMeasurementLabel(position, text) {
+        // ينشئ ملصق قياس ثابتًا وغير قابل للتفاعل.
+        const labelElement = document.createElement("div"); // ينشئ عنصر HTML لعرض القياس.
+        labelElement.className = "measurement-label"; // يربط العنصر بتنسيق ملصق القياس.
+        labelElement.textContent = text; // يضع القياس كنص آمن داخل الملصق.
+        return L.marker(position, {
+          // ينشئ علامة Leaflet في موقع الملصق.
+          interactive: false, // يسمح بوصول نقرات الرسم إلى الخريطة من خلالها.
+          icon: L.divIcon({
+            className: "measurement-icon",
+            html: labelElement,
+            iconSize: [270, 36],
+            iconAnchor: [135, 18],
+          }), // يضبط حجم الملصق ومحوره على منتصفه.
+        }); // يعيد علامة القياس.
+      } // ينهي إنشاء ملصق القياس.
+
+      function calculateLength(points, closeShape = false) {
+        // يحسب طول المسار بالمتر، ويغلقه عند قياس محيط مساحة.
+        let length = 0; // يبدأ مجموع الأطوال من صفر.
+        for (let index = 1; index < points.length; index += 1) {
+          // يمر على كل زوج متتالٍ من النقاط.
+          length += points[index - 1].distanceTo(points[index]); // يضيف المسافة الجغرافية بين النقطتين.
+        } // ينهي جمع أطوال أجزاء المسار.
+        if (closeShape && points.length > 2) {
+          // يضيف ضلع الإغلاق عند قياس مضلع مكتمل.
+          length += points[points.length - 1].distanceTo(points[0]); // يصل آخر نقطة بأول نقطة.
+        } // ينهي حساب ضلع إغلاق المضلع.
+        return length; // يعيد الطول بالمتر.
+      } // ينهي حساب طول الخط أو المحيط.
+
+      function calculateArea(points) {
+        // يحسب مساحة المضلع بالمتر المربع على سطح الأرض.
+        const earthRadius = 6378137; // يستخدم نصف قطر الأرض بالمتر لحساب مساحة كروية تقريبية.
+        let areaSum = 0; // يخزن مجموع زوايا أضلاع المضلع.
+        for (let index = 0; index < points.length; index += 1) {
+          // يمر على أضلاع المضلع بما فيها ضلع الإغلاق.
+          const current = points[index]; // يقرأ رأس المضلع الحالي.
+          const next = points[(index + 1) % points.length]; // يقرأ الرأس التالي ويلتف لأول رأس عند نهاية القائمة.
+          const currentLatitude = (current.lat * Math.PI) / 180; // يحول خط العرض الحالي إلى راديان.
+          const nextLatitude = (next.lat * Math.PI) / 180; // يحول خط العرض التالي إلى راديان.
+          const longitudeDifference =
+            ((next.lng - current.lng) * Math.PI) / 180; // يحول فرق خط الطول إلى راديان.
+          areaSum +=
+            longitudeDifference *
+            (2 + Math.sin(currentLatitude) + Math.sin(nextLatitude)); // يضيف مساهمة الضلع في مساحة المضلع.
+        } // ينهي المرور على أضلاع المضلع.
+        return Math.abs((areaSum * earthRadius * earthRadius) / 2); // يعيد المساحة موجبة بالمتر المربع.
+      } // ينهي حساب المساحة الجغرافية.
+
+      function formatLength(length) {
+        // يحول الطول بالمتر إلى صيغة مقروءة.
+        return length < 1000 // يختار المتر للأطوال الأقل من كيلومتر.
+          ? `${measurementNumber.format(length)} م`
+          : `${measurementNumber.format(length / 1000)} كم`; // يحول الأطوال الأكبر إلى كيلومترات.
+      } // ينهي تنسيق الطول.
+
+      function formatArea(area) {
+        // يحول المساحة بالمتر المربع إلى صيغة مقروءة.
+        return area < 1000000 // يختار المتر المربع للمساحات الأقل من كيلومتر مربع.
+          ? `${measurementNumber.format(area)} م²`
+          : `${measurementNumber.format(area / 1000000)} كم²`; // يحول المساحات الأكبر إلى كيلومترات مربعة.
+      } // ينهي تنسيق المساحة.
+
+      function getMeasurementText(mode, points) {
+        // ينشئ النص الذي سيظهر فوق الخط أو المساحة.
+        if (mode === "line")
+          return `الطول: ${formatLength(calculateLength(points))}`; // يعرض طول الخط المفتوح.
+        const perimeter = formatLength(
+          calculateLength(points, points.length >= 3),
+        ); // يحسب المحيط ويغلق الشكل بعد اكتمال ثلاث نقاط.
+        if (points.length < 3) return `المحيط: ${perimeter}`; // يعرض المحيط المؤقت إلى أن تكتمل رؤوس المساحة.
+        return `المساحة: ${formatArea(calculateArea(points))} | المحيط: ${perimeter}`; // يعرض المساحة والمحيط للمضلع المكتمل.
+      } // ينهي إعداد نص القياس.
+
+      function updateDrawingControls() {
+        // يزامن شكل الأزرار مع وضع الرسم الحالي.
+        document.querySelectorAll("[data-draw-mode]").forEach((modeButton) => {
+          // يمر على أزرار اختيار أدوات الرسم.
+          const isActive = modeButton.dataset.drawMode === drawingMode; // يتحقق إن كان هذا الزر يمثل الوضع المختار.
+          modeButton.classList.toggle("active", isActive); // يضيف أو يزيل تنسيق الوضع النشط.
+          modeButton.setAttribute("aria-pressed", String(isActive)); // يعلن حالة الزر لقارئات الشاشة.
+        }); // ينهي المرور على أزرار أوضاع الرسم.
+        finishButton.hidden = !drawingMode || drawingMode === "point"; // يخفي زر الإنهاء في وضع النقطة أو عند عدم الرسم.
+        const minimumPoints = drawingMode === "area" ? 3 : 2; // يتطلب المضلع ثلاث نقاط والخط نقطتين على الأقل.
+        finishButton.disabled =
+          !drawingMode || draftPoints.length < minimumPoints; // يمنع اعتماد شكل غير مكتمل.
+      } // ينهي تحديث حالة أدوات الرسم.
+
+      function clearDraft() {
+        // يزيل الشكل المؤقت ويجهز قائمة نقاط جديدة.
+        if (previewLabel) map.removeLayer(previewLabel); // يحذف ملصق قياس المعاينة إن كان موجودًا.
+        previewLabel = null; // يفرغ مرجع ملصق المعاينة المحذوف.
+        if (previewLayer) {
+          // يتأكد من وجود شكل مؤقت قبل تنظيفه.
+          map.removeLayer(previewLayer); // يحذف المعاينة المؤقتة من الخريطة.
+        } // ينهي تنظيف المعاينة المؤقتة.
+        previewLayer = null; // يفرغ مرجع المعاينة المحذوفة.
+        draftPoints = []; // يبدأ قائمة إحداثيات فارغة.
+      } // ينهي مسح الشكل المؤقت.
+
+      function stopDrawing() {
+        // يوقف وضع الرسم الحالي ويحافظ على الأشكال المكتملة.
+        clearDraft(); // يحذف أي شكل لم يتم اعتماده.
+        drawingMode = null; // يلغي وضع الرسم النشط.
+        map.doubleClickZoom.enable(); // يعيد تكبير الخريطة بالنقر المزدوج.
+        updateDrawingControls(); // يعيد الأزرار إلى حالتها غير النشطة.
+      } // ينهي إيقاف الرسم.
+
+      document.querySelectorAll("[data-draw-mode]").forEach((modeButton) => {
+        // يجهز كل زر لاختيار نوع الرسم.
+        modeButton.addEventListener("click", () => {
+          // يستجيب عند اختيار النقطة أو الخط أو المساحة.
+          clearDraft(); // يتخلص من أي رسم غير مكتمل عند تغيير الأداة.
+          drawingMode = modeButton.dataset.drawMode; // يخزن نوع الأداة التي اختارها المستخدم.
+          if (drawingMode !== "point")
+            map.doubleClickZoom.disable(); // يمنع تكبير الخريطة أثناء وضع رؤوس الخط أو المضلع.
+          else map.doubleClickZoom.enable(); // يبقي تكبير النقر المزدوج متاحًا أثناء وضع النقطة.
+          updateDrawingControls(); // يبرز الأداة المختارة ويضبط زر الإنهاء.
+          status.textContent =
+            drawingMode === "point" // يختار رسالة مناسبة للأداة.
+              ? "اضغط على الخريطة لإضافة نقطة."
+              : drawingMode === "line"
+                ? "اضغط على الخريطة لإضافة نقاط الخط، ثم اضغط إنهاء الرسم."
+                : "اضغط على الخريطة لإضافة حدود المساحة، ثم اضغط إنهاء الرسم.";
+        }); // ينهي استجابة اختيار الأداة.
+      }); // ينهي تجهيز أزرار أنواع الرسم.
+
+      map.on("click", (event) => {
+        // يستقبل نقرات الخريطة عند تفعيل إحدى أدوات الرسم.
+        if (!drawingMode) return; // يتجاهل النقر إذا لم يختر المستخدم أداة رسم.
+        if (drawingMode === "point") {
+          // يعالج وضع إضافة نقطة واحدة.
+          L.circleMarker(event.latlng, {
+            radius: 7,
+            color: "#ffffff",
+            weight: 2,
+            fillColor: "#166534",
+            fillOpacity: 1,
+          }) // ينشئ علامة نقطة واضحة.
+            .bindPopup("نقطة مرسومة") // يضيف وصفًا يظهر عند الضغط على النقطة.
+            .addTo(drawings); // يحفظ النقطة ضمن مجموعة الرسومات.
+          stopDrawing(); // ينهي وضع النقطة بعد إضافتها.
+          status.textContent = "تمت إضافة النقطة."; // يؤكد نجاح إضافة النقطة.
+          return; // يمنع تنفيذ منطق الخط والمساحة على النقطة.
+        } // ينهي معالجة وضع النقطة.
+        draftPoints.push(event.latlng); // يضيف موقع النقرة كرأس جديد للشكل الجاري.
+        if (previewLabel) map.removeLayer(previewLabel); // يزيل ملصق القياس السابق قبل تحديثه.
+        previewLabel = null; // يفرغ مرجع ملصق القياس القديم.
+        if (previewLayer) map.removeLayer(previewLayer); // يزيل شكل المعاينة السابق قبل إعادة رسمه.
+        if (drawingMode === "line" || draftPoints.length < 3) {
+          // يعرض الخط أو حدود المساحة قبل اكتمال ثلاث نقاط.
+          previewLayer = L.polyline(draftPoints, {
+            color: "#d97706",
+            weight: 4,
+            dashArray: "6 6",
+          }).addTo(map); // يرسم معاينة متقطعة للشكل الجاري.
+        } else {
+          // يرسم معاينة مساحة بعد توفر ثلاثة رؤوس على الأقل.
+          previewLayer = L.polygon(draftPoints, {
+            color: "#0f766e",
+            weight: 3,
+            fillColor: "#14b8a6",
+            fillOpacity: 0.2,
+          }).addTo(map); // يعرض حدود المساحة وتعبئتها.
+        } // ينهي تحديث معاينة الشكل.
+        if (draftPoints.length >= 2) {
+          // ينتظر نقطتين قبل إظهار قياس الخط أو محيط المساحة.
+          previewLabel = createMeasurementLabel(
+            previewLayer.getCenter(),
+            getMeasurementText(drawingMode, draftPoints),
+          ).addTo(map); // يعرض القياس عند منتصف الشكل الجاري.
+        } // ينهي إظهار قياس المعاينة.
+        updateDrawingControls(); // يفعّل زر الإنهاء عندما يصل الشكل للحد الأدنى من النقاط.
+        status.textContent = `${getMeasurementText(drawingMode, draftPoints)} | عدد النقاط: ${draftPoints.length}. أكمل الرسم ثم اضغط إنهاء الرسم.`; // يعرض القياس الحالي وعدد النقاط.
+      }); // ينهي استقبال نقرات الرسم.
+
+      finishButton.addEventListener("click", () => {
+        // يعتمد الخط أو المساحة عند الضغط على زر الإنهاء.
+        const finishedMode = drawingMode; // يحفظ نوع الشكل قبل إيقاف وضع الرسم.
+        const finalStyle =
+          finishedMode === "line" // يختار لون الخط أو المساحة المكتملة.
+            ? { color: "#c2410c", weight: 4 }
+            : {
+                color: "#0f766e",
+                weight: 3,
+                fillColor: "#14b8a6",
+                fillOpacity: 0.25,
+              };
+        const finishedShape =
+          finishedMode === "line" // ينشئ الشكل النهائي حسب النوع المختار.
+            ? L.polyline(draftPoints, finalStyle)
+            : L.polygon(draftPoints, finalStyle);
+        finishedShape.addTo(drawings); // يحفظ الشكل النهائي ضمن مجموعة الرسومات.
+        createMeasurementLabel(
+          finishedShape.getCenter(),
+          getMeasurementText(finishedMode, draftPoints),
+        ).addTo(measurementLabels); // يحفظ قياس الشكل في منتصفه.
+        stopDrawing(); // ينهي الوضع ويحذف المعاينة المؤقتة فقط.
+        status.textContent =
+          finishedMode === "line" ? "تم حفظ الخط." : "تم حفظ المساحة."; // يؤكد نوع الشكل الذي تم حفظه.
+      }); // ينهي حدث اعتماد الرسم.
+
+      document
+        .getElementById("cancel-drawing")
+        .addEventListener("click", () => {
+          // يلغي الشكل الجاري عند الضغط على زر الإلغاء.
+          stopDrawing(); // يزيل المعاينة ويوقف أداة الرسم.
+          status.textContent = "تم إلغاء الرسم الجاري."; // يوضح أن الرسومات المكتملة لم تتأثر.
+        }); // ينهي حدث إلغاء الرسم.
+
+      document
+        .getElementById("clear-drawings")
+        .addEventListener("click", () => {
+          // يستجيب لطلب مسح كل الرسومات.
+          stopDrawing(); // يلغي أي شكل غير مكتمل أولًا.
+          drawings.clearLayers(); // يمسح النقاط والخطوط والمساحات المكتملة.
+          measurementLabels.clearLayers(); // يمسح ملصقات القياس المرتبطة بالأشكال.
+          status.textContent = "تم مسح كل الرسومات."; // يؤكد إتمام عملية المسح.
+        }); // ينهي حدث مسح الرسومات.
+
+      button.addEventListener("click", () => {
+        // يشغّل الدالة التالية عند ضغط المستخدم على الزر.
+        if (!navigator.geolocation) {
+          // يتحقق أن المتصفح يدعم واجهة تحديد الموقع.
+          status.textContent = "متصفحك لا يدعم تحديد الموقع."; // يعرض رسالة مناسبة عند عدم توفر الدعم.
+          return; // يوقف التنفيذ لأن طلب الموقع غير ممكن.
+        } // ينهي التحقق من دعم المتصفح.
+        button.disabled = true; // يمنع تكرار الضغط أثناء انتظار نتيجة الموقع.
+        status.textContent =
+          "جارٍ تحديد موقعك... وافق على طلب الإذن من المتصفح."; // يوضح أن الطلب قيد التنفيذ.
+        navigator.geolocation.getCurrentPosition(
+          // يطلب موقع الجهاز، وسيستدعي إحدى الدالتين حسب النتيجة.
+          (position) => {
+            // تُنفذ هذه الدالة إذا نجح المتصفح في تحديد الموقع.
+            const latitude = position.coords.latitude; // يقرأ خط العرض الذي أعاده الجهاز.
+            const longitude = position.coords.longitude; // يقرأ خط الطول الذي أعاده الجهاز.
+            const accuracy = position.coords.accuracy; // يقرأ دقة الموقع المقدرة بالمتر.
+            const userLocation = [latitude, longitude]; // ينشئ الإحداثيات بالترتيب الذي تستخدمه Leaflet.
+            map.setView(userLocation, 16); // ينقل الخريطة إلى الموقع ويقرّبها.
+            if (locationMarker) map.removeLayer(locationMarker); // يزيل العلامة السابقة إن وُجدت لتجنب تكرارها.
+            if (accuracyCircle) map.removeLayer(accuracyCircle); // يزيل دائرة الدقة السابقة إن وُجدت.
+            locationMarker = L.marker(userLocation).addTo(map); // يرسم علامة عند الموقع الحالي.
+            locationMarker.bindPopup("أنت هنا").openPopup(); // يربط نافذة صغيرة بالعلامة ويفتحها.
+            accuracyCircle = L.circle(userLocation, { radius: accuracy }).addTo(
+              map,
+            ); // يرسم دائرة تمثل نطاق دقة الموقع بالمتر.
+            status.textContent = `تم تحديد موقعك. الدقة التقريبية: ${Math.round(accuracy)} متر.`; // يعرض نجاح الطلب والدقة مقربة لأقرب متر.
+            button.disabled = false; // يعيد تفعيل الزر للسماح بطلب الموقع مرة أخرى.
+          }, // ينهي دالة النجاح.
+          (error) => {
+            // تُنفذ هذه الدالة إذا رُفض الإذن أو تعذر تحديد الموقع.
+            const messages = {
+              1: "لم تسمح بالوصول إلى موقعك.",
+              2: "تعذر معرفة موقعك. تحقق من إعدادات الموقع.",
+              3: "انتهت مهلة تحديد الموقع. حاول مرة أخرى.",
+            }; // يربط رموز أخطاء المتصفح برسائل مفهومة.
+            status.textContent =
+              messages[error.code] || "حدث خطأ أثناء تحديد الموقع."; // يعرض رسالة الخطأ المناسبة أو رسالة عامة.
+            button.disabled = false; // يعيد تفعيل الزر بعد انتهاء المحاولة الفاشلة.
+          }, // ينهي دالة الخطأ.
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }, // يطلب دقة أعلى، وينتظر 10 ثوانٍ، ولا يقبل موقعًا مخزنًا قديمًا.
+        ); // ينهي استدعاء واجهة تحديد الموقع.
+      }); // ينهي تسجيل حدث الضغط على الزر.
+    </script>
+    <!-- ينهي كود JavaScript. -->
+  </body>
+  <!-- ينهي محتوى الصفحة. -->
+</html>
+<!-- ينهي مستند HTML. -->
